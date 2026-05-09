@@ -34,3 +34,36 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# opencode
+/.opencode
+
+# ====================
+# Ignore local .specify files that may interfere with collaboration
+# ====================
+
+# Ignore local git extensions and custom commands
+.specify/extensions/
+
+# Ignore local helper scripts (bash/powershell)
+.specify/scripts/
+
+# Ignore local configuration files that may contain machine‑specific paths
+.specify/init-options.json
+.specify/integration.json
+
+# Optional: ignore personal workflow customizations (uncomment if needed)
+# .specify/workflows/
+
+# ====================
+# But keep files that must be shared with the team
+# ====================
+#! .specify/memory/
+#! .specify/memory/constitution.md
+#! .specify/templates/
+#! .specify/templates/*.md
+#! .specify/integrations/
+#! .specify/integrations/*.json
+# Uncomment the following lines if the team shares workflows
+# ! .specify/workflows/
+# ! .specify/workflows/**/*.yml
