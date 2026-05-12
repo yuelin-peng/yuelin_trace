@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  mock-grpc:
+    build: .
+    ports:
+      - "9090:9090"
+    environment:
+      - GRPC_PORT=9090
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "9090"]
+      interval: 5s
+      timeout: 3s
+      retries: 5

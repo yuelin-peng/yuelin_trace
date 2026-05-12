@@ -2,7 +2,7 @@ import { useEffect, useCallback } from 'react';
 
 interface KeyboardShortcut {
   key: string;
-  modifiers?: ('ctrl' | 'shift' | 'alt' | 'meta')[];
+  modifiers?: readonly ('ctrl' | 'shift' | 'alt' | 'meta')[];
   action: () => void;
   description: string;
 }

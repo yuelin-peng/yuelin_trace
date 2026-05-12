@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package com.yuelin.revision.v1;
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/page.proto";
+
+message Revision {
+  string id = 1;
+  string article_id = 2;
+  string content = 3;
+  string author_id = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message ListRevisionsRequest {
+  string article_id = 1;
+  PageRequest page_request = 2;
+  string sort_order = 3;
+}
+
+message ListRevisionsResponse {
+  repeated Revision revisions = 1;
+  PageResponse page_response = 2;
+}
+
+message GetRevisionRequest {
+  string id = 1;
+}
+
+message GetRevisionResponse {
+  Revision revision = 1;
+}
+
+message RestoreRevisionRequest {
+  string revision_id = 1;
+  string title = 2;
+}
+
+message RestoreRevisionResponse {
+  string article_id = 1;
+  string revision_id = 2;
+  google.protobuf.Timestamp restored_at = 3;
+}
+
+service RevisionService {
+  rpc ListRevisions(ListRevisionsRequest) returns (ListRevisionsResponse);
+  rpc GetRevision(GetRevisionRequest) returns (GetRevisionResponse);
+  rpc RestoreRevision(RestoreRevisionRequest) returns (RestoreRevisionResponse);
+}

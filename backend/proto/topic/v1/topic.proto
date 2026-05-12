@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package com.yuelin.topic.v1;
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/page.proto";
+
+message Topic {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  google.protobuf.Timestamp created_at = 4;
+}
+
+message CreateTopicRequest {
+  string name = 1;
+}
+
+message CreateTopicResponse {
+  Topic topic = 1;
+}
+
+message GetTopicRequest {
+  string id = 1;
+}
+
+message GetTopicResponse {
+  Topic topic = 1;
+}
+
+message UpdateTopicRequest {
+  string id = 1;
+  repeated string update_mask = 2;
+  string name = 3;
+}
+
+message UpdateTopicResponse {
+  Topic topic = 1;
+}
+
+message DeleteTopicRequest {
+  string id = 1;
+}
+
+message ListTopicsRequest {
+  PageRequest page_request = 1;
+  string search = 2;
+  string sort_by = 3;
+  string sort_order = 4;
+}
+
+message ListTopicsResponse {
+  repeated Topic topics = 1;
+  PageResponse page_response = 2;
+}
+
+service TopicService {
+  rpc CreateTopic(CreateTopicRequest) returns (CreateTopicResponse);
+  rpc GetTopic(GetTopicRequest) returns (GetTopicResponse);
+  rpc UpdateTopic(UpdateTopicRequest) returns (UpdateTopicResponse);
+  rpc DeleteTopic(DeleteTopicRequest) returns (google.protobuf.Empty);
+  rpc ListTopics(ListTopicsRequest) returns (ListTopicsResponse);
+}

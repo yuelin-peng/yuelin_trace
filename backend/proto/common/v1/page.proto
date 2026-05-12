@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package com.yuelin.common.v1;
+
+message PageRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message PageResponse {
+  string next_page_token = 1;
+  bool has_more = 2;
+  int32 total_count = 3;
+}

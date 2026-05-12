@@ -107,6 +107,7 @@ class ArticleService {
     total: number;
     page: number;
     pageSize: number;
+    hasMore: boolean;
   }> {
     try {
       const request: ListArticlesRequest = {
@@ -138,6 +139,7 @@ class ArticleService {
         total: pageResponse?.totalCount || 0,
         page: 1,
         pageSize: request.pageRequest?.pageSize || 20,
+        hasMore: pageResponse?.hasMore || false,
       };
     } catch (error) {
       console.error('ListArticles failed:', error);

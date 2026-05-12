@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+package com.yuelin.article.v1;
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/page.proto";
+
+enum ArticleState {
+  ARTICLE_STATE_UNSPECIFIED = 0;
+  ARTICLE_STATE_DRAFT = 1;
+  ARTICLE_STATE_PUBLISHED = 2;
+  ARTICLE_STATE_ARCHIVED = 3;
+}
+
+message Article {
+  string id = 1;
+  string title = 2;
+  string content = 3;
+  string author_id = 4;
+  ArticleState state = 5;
+  string column_id = 6;
+  string series_id = 7;
+  repeated string tag_ids = 8;
+  string topic_id = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+  google.protobuf.Timestamp published_at = 12;
+}
+
+message CreateArticleRequest {
+  string title = 1;
+  string content = 2;
+  string column_id = 3;
+  string series_id = 4;
+  repeated string tag_ids = 5;
+  string topic_id = 6;
+}
+
+message CreateArticleResponse {
+  Article article = 1;
+}
+
+message GetArticleRequest {
+  string id = 1;
+  repeated string fields = 2;
+}
+
+message GetArticleResponse {
+  Article article = 1;
+}
+
+message UpdateArticleRequest {
+  string id = 1;
+  repeated string update_mask = 2;
+  string title = 3;
+  string content = 4;
+  string column_id = 5;
+  string series_id = 6;
+  repeated string tag_ids = 7;
+  string topic_id = 8;
+  ArticleState state = 9;
+}
+
+message UpdateArticleResponse {
+  Article article = 1;
+}
+
+message DeleteArticleRequest {
+  string id = 1;
+}
+
+message ListArticlesRequest {
+  PageRequest page_request = 1;
+  string author_id = 2;
+  ArticleState state = 3;
+  string column_id = 4;
+  string series_id = 5;
+  string topic_id = 6;
+  repeated string tag_ids = 7;
+  string sort_by = 8;
+  string sort_order = 9;
+}
+
+message ListArticlesResponse {
+  repeated Article articles = 1;
+  PageResponse page_response = 2;
+}
+
+service ArticleService {
+  rpc CreateArticle(CreateArticleRequest) returns (CreateArticleResponse);
+  rpc GetArticle(GetArticleRequest) returns (GetArticleResponse);
+  rpc UpdateArticle(UpdateArticleRequest) returns (UpdateArticleResponse);
+  rpc DeleteArticle(DeleteArticleRequest) returns (google.protobuf.Empty);
+  rpc ListArticles(ListArticlesRequest) returns (ListArticlesResponse);
+}

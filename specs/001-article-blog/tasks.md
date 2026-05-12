@@ -202,6 +202,38 @@
 
 ---
 
+## Phase 9: Integration Testing (Testcontainers)
+
+**Purpose**: Integration tests using Testcontainers with mock gRPC server
+
+- [x] T089 [P] Create backend directory structure in backend/
+- [x] T090 [P] Create mock gRPC server in Go in backend/cmd/mock-server/main.go
+- [x] T091 [P] Add Protocol Buffer definitions in backend/proto/
+- [x] T092 [P] Create Dockerfile and docker-compose.yml for mock server in backend/
+- [x] T093 [P] Add Testcontainers integration tests in frontend/tests/integration/
+- [x] T094 [P] Add testcontainers dependency to frontend/package.json
+- [x] T095 [P] Create integration test specifications for mock-server.spec.ts
+- [x] T096 [P] Create integration test specifications for grpc-integration.spec.ts
+- [x] T097 [P] Create docker-compose integration test in tests/integration/testcontainers.spec.ts
+- [x] T098 [P] Add documentation for mock server usage in backend/README.md
+- [x] T099 [P] Add test:integration script to frontend/package.json
+
+---
+
+## Phase 10: E2E Testing
+
+**Purpose**: Playwright end-to-end tests for full user flows
+
+- [ ] T100 [P] Implement E2E tests for article creation flow
+- [ ] T101 [P] Implement E2E tests for authentication flow
+- [ ] T102 [P] Implement E2E tests for search functionality
+- [ ] T103 [P] Implement E2E tests for comment posting
+- [ ] T104 [P] Add browser matrix testing (chromium, firefox, webkit)
+- [ ] T105 [P] Add mobile viewport testing (Mobile Chrome, iPhone)
+- [ ] T106 [P] Verify E2E tests pass against mock server
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies

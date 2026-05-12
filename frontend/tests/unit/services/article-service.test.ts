@@ -122,7 +122,7 @@ describe('ArticleService', () => {
 
       expect(result.articles).toHaveLength(2);
       expect(result.total).toBe(10);
-      expect(result.hasMore).toBeUndefined();
+      expect(result.hasMore).toBe(true);
     });
 
     it('should handle empty results', async () => {

@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package com.yuelin.search.v1;
+
+import "article/v1/article.proto";
+
+message SearchArticlesRequest {
+  string query = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  repeated string topic_ids = 4;
+  repeated string tag_ids = 5;
+  string author_id = 6;
+  string sort_by = 7;
+  string sort_order = 8;
+}
+
+message SearchResultItem {
+  article.v1.Article article = 1;
+  double relevance_score = 2;
+  string highlighted_snippet = 3;
+}
+
+message SearchArticlesResponse {
+  repeated SearchResultItem results = 1;
+  int32 total_matches = 2;
+}
+
+service SearchService {
+  rpc SearchArticles(SearchArticlesRequest) returns (SearchArticlesResponse);
+}

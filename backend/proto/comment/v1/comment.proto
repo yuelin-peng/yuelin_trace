@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package com.yuelin.comment.v1;
+
+import "google/protobuf/timestamp.proto";
+import "common/v1/page.proto";
+
+message Comment {
+  string id = 1;
+  string article_id = 2;
+  string author_id = 3;
+  string parent_id = 4;
+  string content = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message CreateCommentRequest {
+  string article_id = 1;
+  string parent_id = 2;
+  string content = 3;
+}
+
+message CreateCommentResponse {
+  Comment comment = 1;
+}
+
+message GetCommentRequest {
+  string id = 1;
+}
+
+message GetCommentResponse {
+  Comment comment = 1;
+}
+
+message UpdateCommentRequest {
+  string id = 1;
+  string content = 2;
+}
+
+message UpdateCommentResponse {
+  Comment comment = 1;
+}
+
+message DeleteCommentRequest {
+  string id = 1;
+}
+
+message ListCommentsRequest {
+  string article_id = 1;
+  string parent_id = 2;
+  PageRequest page_request = 3;
+  string sort_by = 4;
+  string sort_order = 5;
+}
+
+message ListCommentsResponse {
+  repeated Comment comments = 1;
+  PageResponse page_response = 2;
+}
+
+service CommentService {
+  rpc CreateComment(CreateCommentRequest) returns (CreateCommentResponse);
+  rpc GetComment(GetCommentRequest) returns (GetCommentResponse);
+  rpc UpdateComment(UpdateCommentRequest) returns (UpdateCommentResponse);
+  rpc DeleteComment(DeleteCommentRequest) returns (google.protobuf.Empty);
+  rpc ListComments(ListCommentsRequest) returns (ListCommentsResponse);
+}
