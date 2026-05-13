@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# Frontend Scripts Quick Reference
+
+echo "=========================================="
+echo "Frontend Scripts - Article Blog Platform"
+echo "=========================================="
+echo ""
+
+echo "Available scripts in ./scripts/:"
+echo ""
+ls -la "$(dirname "$0")"/*.sh 2>/dev/null | awk '{print "  " $NF}' | grep -v "^./scripts/\.sh$" || true
+
+echo ""
+echo "Usage:"
+echo ""
+echo "  ./scripts/start-frontend.sh [environment]"
+echo "    Environments: development, production, test, e2e, integration"
+echo ""
+echo "  ./scripts/start-all.sh [options]"
+echo "    Options:"
+echo "      --frontend-only    Start only frontend"
+echo "      --backend-only     Start only mock backend"
+echo "      --docker           Start backend with Docker (default)"
+echo "      --go               Start backend with Go"
+echo "      -p, --port <port>  Frontend port (default: 3000)"
+echo ""
+echo "Examples:"
+echo ""
+echo "  # Start frontend in development mode"
+echo "  ./scripts/start-frontend.sh development"
+echo ""
+echo "  # Start frontend and backend together"
+echo "  ./scripts/start-all.sh"
+echo ""
+echo "  # Start only frontend on custom port"
+echo "  ./scripts/start-all.sh --frontend-only -p 8080"
+echo ""
+echo "  # Start backend with Docker"
+echo "  ./scripts/start-all.sh --backend-only --docker"
+echo ""
