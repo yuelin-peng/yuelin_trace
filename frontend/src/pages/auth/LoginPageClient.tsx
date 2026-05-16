@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { LoginForm } from '../../components/auth/LoginForm';
 import { authService } from '../../services/auth-service';
@@ -17,10 +17,28 @@ export default function LoginPageClient() {
 
     try {
       await authService.login(email, password);
-      router.push('/');
-      router.refresh();
+      
+      // Determine redirect target
+      const returnTo = router.query.returnTo;
+      let redirectUrl = '/';
+      
+      if (returnTo && typeof returnTo === 'string') {
+        // If returnTo is register page, go home instead
+        if (returnTo === '/auth/register' || returnTo.startsWith('/auth/register')) {
+          redirectUrl = '/';
+        } else {
+          redirectUrl = returnTo;
+        }
+      }
+      
+      router.push(redirectUrl);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+      const message = err instanceof Error ? err.message : 'Login failed. Please try again.';
+      if (message === 'Authentication required' || message === 'Invalid credentials') {
+        setError("Authentication failed. Either the account doesn't exist or the password is incorrect.");
+      } else {
+        setError(message);
+      }
     } finally {
       setIsLoading(false);
     }

@@ -1,85 +1,61 @@
-import { grpcClient } from './grpc-client';
-import {
-  Topic,
-  CreateTopicRequest,
-  CreateTopicResponse,
-  GetTopicRequest,
-  GetTopicResponse,
-  UpdateTopicRequest,
-  UpdateTopicResponse,
-  DeleteTopicRequest,
-  ListTopicsRequest,
-  ListTopicsResponse,
-} from '../generated/com/yuelin/topic/v1/topic';
+import { tokenStorage } from '../lib/token-storage';
+
+export interface Topic {
+  id: string;
+  name: string;
+  slug: string;
+  createdAt: string;
+}
+
+export interface CreateTopicRequest {
+  name: string;
+}
+
+export interface UpdateTopicRequest {
+  name?: string;
+}
+
+async function apiCall<T>(endpoint: string, method: string = 'GET', body?: unknown): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  const token = tokenStorage.getAccessToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(endpoint, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorMessage = data?.error?.displayMessage || `HTTP ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  return data as T;
+}
 
 class TopicService {
-  async createTopic(name: string): Promise<Topic> {
-    try {
-      const request: CreateTopicRequest = { name };
-
-      const response = await grpcClient.call<CreateTopicResponse>(
-        'com.yuelin.topic.v1.TopicService',
-        'CreateTopic',
-        CreateTopicRequest.toJSON(request)
-      );
-
-      if (!response?.topic) {
-        throw new Error('Failed to create topic');
-      }
-
-      return Topic.fromJSON(response.topic);
-    } catch (error) {
-      console.error('CreateTopic failed:', error);
-      throw error;
-    }
+  async createTopic(request: CreateTopicRequest): Promise<Topic> {
+    return apiCall<Topic>('/api/topics', 'POST', request);
   }
 
-  async getTopic(id: string): Promise<Topic | undefined> {
-    try {
-      const request: GetTopicRequest = { id };
-      const response = await grpcClient.call<GetTopicResponse>(
-        'com.yuelin.topic.v1.TopicService',
-        'GetTopic',
-        GetTopicRequest.toJSON(request)
-      );
-      return response?.topic ? Topic.fromJSON(response.topic) : undefined;
-    } catch (error) {
-      console.error('GetTopic failed:', error);
-      throw error;
-    }
+  async getTopic(id: string): Promise<Topic> {
+    return apiCall<Topic>(`/api/topics/${id}`);
   }
 
-  async updateTopic(id: string, name: string, updateMask?: string[]): Promise<Topic | undefined> {
-    try {
-      const request: UpdateTopicRequest = {
-        id,
-        name,
-        updateMask: updateMask || ['name'],
-      };
-      const response = await grpcClient.call<UpdateTopicResponse>(
-        'com.yuelin.topic.v1.TopicService',
-        'UpdateTopic',
-        UpdateTopicRequest.toJSON(request)
-      );
-      return response?.topic ? Topic.fromJSON(response.topic) : undefined;
-    } catch (error) {
-      console.error('UpdateTopic failed:', error);
-      throw error;
-    }
+  async updateTopic(id: string, request: UpdateTopicRequest): Promise<Topic> {
+    return apiCall<Topic>(`/api/topics/${id}`, 'PATCH', request);
   }
 
   async deleteTopic(id: string): Promise<void> {
-    try {
-      const request: DeleteTopicRequest = { id };
-      await grpcClient.call(
-        'com.yuelin.topic.v1.TopicService',
-        'DeleteTopic',
-        DeleteTopicRequest.toJSON(request)
-      );
-    } catch (error) {
-      console.error('DeleteTopic failed:', error);
-      throw error;
-    }
+    await apiCall(`/api/topics/${id}`, 'DELETE');
   }
 
   async listTopics(options?: {
@@ -87,48 +63,29 @@ class TopicService {
     pageToken?: string;
     search?: string;
     sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
+    sortOrder?: string;
   }): Promise<{
     topics: Topic[];
+    total: number;
+    page: number;
+    pageSize: number;
     hasMore: boolean;
-    nextPageToken?: string;
   }> {
-    try {
-      const request: ListTopicsRequest = {
-        pageRequest: {
-          pageSize: options?.pageSize || 50,
-          pageToken: options?.pageToken || '',
-        },
-        search: options?.search || '',
-        sortBy: options?.sortBy || 'created_at',
-        sortOrder: options?.sortOrder || 'desc',
-      };
+    const query = new URLSearchParams();
+    if (options?.pageSize) query.append('page_size', String(options.pageSize));
+    if (options?.pageToken) query.append('page_token', options.pageToken);
+    if (options?.search) query.append('search', options.search);
 
-      const response = await grpcClient.call<ListTopicsResponse>(
-        'com.yuelin.topic.v1.TopicService',
-        'ListTopics',
-        ListTopicsRequest.toJSON(request)
-      );
+    const queryString = query.toString();
+    const response = await apiCall<{ topics: Topic[]; pageResponse: { nextPageToken?: string; hasMore: boolean; totalCount?: number } }>(`/api/topics${queryString ? `?${queryString}` : ''}`);
 
-      const topics = (response?.topics || []).map((t) => Topic.fromJSON(t));
-      return {
-        topics,
-        hasMore: response?.pageResponse?.hasMore || false,
-        nextPageToken: response?.pageResponse?.nextPageToken || undefined,
-      };
-    } catch (error) {
-      console.error('ListTopics failed:', error);
-      throw error;
-    }
-  }
-
-  generateSlug(name: string): string {
-    return name
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/[\s_-]+/g, '-')
-      .replace(/^-+|-+$/g, '');
+    return {
+      topics: response.topics || [],
+      total: response.pageResponse?.totalCount || 0,
+      page: 1,
+      pageSize: options?.pageSize || 20,
+      hasMore: response.pageResponse?.hasMore || false,
+    };
   }
 }
 

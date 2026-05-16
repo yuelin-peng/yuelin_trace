@@ -1,6 +1,6 @@
 import React from 'react';
 import clsx from 'clsx';
-import { Topic } from '../../generated/com/yuelin/topic/v1/topic';
+import { Topic } from '../../services/topic-service';
 
 export interface TopicCardProps {
   topic: Topic;
@@ -10,7 +10,7 @@ export interface TopicCardProps {
 }
 
 export function TopicCard({ topic, onEdit, onDelete, className }: TopicCardProps) {
-  const formatDate = (date: Date | undefined) => {
+  const formatDate = (date: string | undefined) => {
     if (!date) return '';
     return new Intl.DateTimeFormat('en-US', {
       year: 'numeric',

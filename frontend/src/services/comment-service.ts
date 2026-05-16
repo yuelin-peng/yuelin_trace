@@ -1,166 +1,116 @@
-import { grpcClient } from './grpc-client';
-import {
-  Comment,
-  CreateCommentRequest,
-  CreateCommentResponse,
-  GetCommentRequest,
-  GetCommentResponse,
-  UpdateCommentRequest,
-  UpdateCommentResponse,
-  DeleteCommentRequest,
-  ListCommentsRequest,
-  ListCommentsResponse,
-} from '../generated/com/yuelin/comment/v1/comment';
-import { PageResponse } from '../generated/com/yuelin/common/v1/page';
+import { tokenStorage } from '../lib/token-storage';
+
+export interface Comment {
+  id: string;
+  articleId: string;
+  authorId: string;
+  parentId?: string;
+  content: string;
+  depth: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface CommentWithReplies extends Comment {
   replies: CommentWithReplies[];
-  depth: number;
+}
+
+async function apiCall<T>(endpoint: string, method: string = 'GET', body?: unknown): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  const token = tokenStorage.getAccessToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(endpoint, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorMessage = data?.error?.displayMessage || `HTTP ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  return data as T;
 }
 
 class CommentService {
-  async createComment(
-    articleId: string,
-    content: string,
-    parentId?: string
-  ): Promise<Comment> {
-    try {
-      const request: CreateCommentRequest = {
-        articleId,
-        parentId: parentId || '',
-        content,
-      };
-
-      const response = await grpcClient.call<CreateCommentResponse>(
-        'com.yuelin.comment.v1.CommentService',
-        'CreateComment',
-        CreateCommentRequest.toJSON(request)
-      );
-
-      if (!response?.comment) {
-        throw new Error('Failed to create comment');
-      }
-
-      return Comment.fromJSON(response.comment);
-    } catch (error) {
-      console.error('CreateComment failed:', error);
-      throw error;
-    }
+  async createComment(articleId: string, content: string, parentId?: string): Promise<Comment> {
+    return apiCall<Comment>('/api/comments', 'POST', {
+      articleId,
+      content,
+      parentId,
+    });
   }
 
-  async getComment(id: string): Promise<Comment | undefined> {
-    try {
-      const request: GetCommentRequest = { id };
-      const response = await grpcClient.call<GetCommentResponse>(
-        'com.yuelin.comment.v1.CommentService',
-        'GetComment',
-        GetCommentRequest.toJSON(request)
-      );
-      return response?.comment ? Comment.fromJSON(response.comment) : undefined;
-    } catch (error) {
-      console.error('GetComment failed:', error);
-      throw error;
-    }
+  async getComment(id: string): Promise<Comment> {
+    return apiCall<Comment>(`/api/comments/${id}`);
   }
 
-  async updateComment(id: string, content: string): Promise<Comment | undefined> {
-    try {
-      const request: UpdateCommentRequest = { id, content };
-      const response = await grpcClient.call<UpdateCommentResponse>(
-        'com.yuelin.comment.v1.CommentService',
-        'UpdateComment',
-        UpdateCommentRequest.toJSON(request)
-      );
-      return response?.comment ? Comment.fromJSON(response.comment) : undefined;
-    } catch (error) {
-      console.error('UpdateComment failed:', error);
-      throw error;
-    }
+  async updateComment(id: string, content: string): Promise<Comment> {
+    return apiCall<Comment>(`/api/comments/${id}`, 'PATCH', { content });
   }
 
   async deleteComment(id: string): Promise<void> {
-    try {
-      const request: DeleteCommentRequest = { id };
-      await grpcClient.call(
-        'com.yuelin.comment.v1.CommentService',
-        'DeleteComment',
-        DeleteCommentRequest.toJSON(request)
-      );
-    } catch (error) {
-      console.error('DeleteComment failed:', error);
-      throw error;
-    }
+    await apiCall(`/api/comments/${id}`, 'DELETE');
   }
 
   async listComments(articleId: string, options?: {
     pageSize?: number;
     pageToken?: string;
-    sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
+    parentId?: string;
   }): Promise<{
     comments: Comment[];
     total: number;
+    page: number;
+    pageSize: number;
     hasMore: boolean;
   }> {
-    try {
-      const request: ListCommentsRequest = {
-        pageRequest: {
-          pageSize: options?.pageSize || 50,
-          pageToken: options?.pageToken || '',
-        },
-        articleId,
-        parentId: '',
-        sortBy: options?.sortBy || 'created_at',
-        sortOrder: options?.sortOrder || 'asc',
-      };
+    const query = new URLSearchParams();
+    if (options?.pageSize) query.append('page_size', String(options.pageSize));
+    if (options?.pageToken) query.append('page_token', options.pageToken);
+    if (options?.parentId) query.append('parent_id', options.parentId);
 
-      const response = await grpcClient.call<ListCommentsResponse>(
-        'com.yuelin.comment.v1.CommentService',
-        'ListComments',
-        ListCommentsRequest.toJSON(request)
-      );
+    const queryString = query.toString();
+    const response = await apiCall<{ comments: Comment[]; pageResponse: { nextPageToken?: string; hasMore: boolean; totalCount?: number } }>(`/api/articles/${articleId}/comments${queryString ? `?${queryString}` : ''}`);
 
-      const comments = (response?.comments || []).map(c => Comment.fromJSON(c));
-      return {
-        comments,
-        total: response?.pageResponse?.totalCount || 0,
-        hasMore: response?.pageResponse?.hasMore || false,
-      };
-    } catch (error) {
-      console.error('ListComments failed:', error);
-      throw error;
-    }
+    return {
+      comments: response.comments || [],
+      total: response.pageResponse?.totalCount || 0,
+      page: 1,
+      pageSize: options?.pageSize || 20,
+      hasMore: response.pageResponse?.hasMore || false,
+    };
   }
 
   buildCommentTree(comments: Comment[], maxDepth: number = 5): CommentWithReplies[] {
     const commentMap = new Map<string, CommentWithReplies>();
-    const rootComments: CommentWithReplies[] = [];
+    const roots: CommentWithReplies[] = [];
 
+    // First pass: create CommentWithReplies for all comments
     comments.forEach((comment) => {
-      commentMap.set(comment.id, {
-        ...comment,
-        replies: [],
-        depth: 0,
-      });
+      commentMap.set(comment.id, { ...comment, replies: [] });
     });
 
+    // Second pass: build tree
     comments.forEach((comment) => {
-      const commentWithReplies = commentMap.get(comment.id)!;
-      
-      if (comment.parentId && commentMap.has(comment.parentId)) {
+      const node = commentMap.get(comment.id)!;
+      if (comment.parentId && commentMap.has(comment.parentId) && comment.depth < maxDepth) {
         const parent = commentMap.get(comment.parentId)!;
-        if (parent.depth < maxDepth - 1) {
-          commentWithReplies.depth = parent.depth + 1;
-          parent.replies.push(commentWithReplies);
-        } else {
-          rootComments.push(commentWithReplies);
-        }
+        parent.replies.push(node);
       } else {
-        rootComments.push(commentWithReplies);
+        roots.push(node);
       }
     });
 
-    return rootComments;
+    return roots;
   }
 }
 

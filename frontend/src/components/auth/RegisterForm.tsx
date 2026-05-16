@@ -27,8 +27,8 @@ export function RegisterForm({ onSubmit, isLoading, error, className }: Register
       setValidationError('Please enter a valid email');
       return;
     }
-    if (password.length < 8) {
-      setValidationError('Password must be at least 8 characters');
+    if (password.length < 8 || !/[0-9]/.test(password) || !/[A-Z]/.test(password)) {
+      setValidationError('Password does not meet the requirements below');
       return;
     }
     if (password !== confirmPassword) {
@@ -98,6 +98,14 @@ export function RegisterForm({ onSubmit, isLoading, error, className }: Register
           required
           minLength={8}
         />
+        <div className="mt-2 space-y-1">
+          <p className="text-xs text-gray-500 font-medium">Password requirements:</p>
+          <ul className="text-xs text-gray-500 space-y-0.5 ml-4 list-disc">
+            <li className={password.length >= 8 ? 'text-green-600' : ''}>At least 8 characters</li>
+            <li className={/[0-9]/.test(password) ? 'text-green-600' : ''}>At least one digit (0-9)</li>
+            <li className={/[A-Z]/.test(password) ? 'text-green-600' : ''}>At least one uppercase letter (A-Z)</li>
+          </ul>
+        </div>
       </div>
 
       <div>

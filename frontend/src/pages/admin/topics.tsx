@@ -1,12 +1,8 @@
-'use client';
-
 import { useState, useEffect, useCallback } from 'react';
 import { AuthGuard } from '../../components/auth/AuthGuard';
 import { TopicList } from '../../components/topic/TopicList';
 import { TopicForm } from '../../components/topic/TopicForm';
-import { topicService } from '../../services/topic-service';
-import { Topic } from '../../generated/com/yuelin/topic/v1/topic';
-import { UserRole } from '../../generated/com/yuelin/user/v1/user';
+import { topicService, Topic } from '../../services/topic-service';
 
 type DialogState = 'none' | 'create' | 'edit';
 
@@ -24,8 +20,7 @@ export default function TopicsPage() {
     try {
       const result = await topicService.listTopics({
         search: searchQuery,
-        sortBy: 'created_at',
-        sortOrder: 'desc',
+        pageSize: 100,
       });
       setTopics(result.topics);
     } catch (err) {
@@ -44,7 +39,7 @@ export default function TopicsPage() {
     setIsSaving(true);
     setError('');
     try {
-      await topicService.createTopic(name);
+      await topicService.createTopic({ name });
       setDialogState('none');
       fetchTopics();
     } catch (err) {
@@ -60,7 +55,7 @@ export default function TopicsPage() {
     setIsSaving(true);
     setError('');
     try {
-      await topicService.updateTopic(editingTopic.id, name);
+      await topicService.updateTopic(editingTopic.id, { name });
       setDialogState('none');
       setEditingTopic(null);
       fetchTopics();
@@ -97,7 +92,7 @@ export default function TopicsPage() {
   };
 
   return (
-    <AuthGuard requiredRoles={[UserRole.USER_ROLE_ADMIN]} fallbackPath="/">
+    <AuthGuard requiredRoles={[1]} fallbackPath="/">
       <main className="min-h-screen bg-gray-50">
         <header className="bg-white shadow-sm">
           <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">

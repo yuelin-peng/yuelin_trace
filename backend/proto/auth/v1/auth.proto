@@ -3,6 +3,7 @@ syntax = "proto3";
 package com.yuelin.auth.v1;
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
 
 enum UserRole {
   USER_ROLE_UNSPECIFIED = 0;

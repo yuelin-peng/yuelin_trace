@@ -1,13 +1,10 @@
-'use client';
-
 import React, { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/router';
 import { useAuth } from '../../contexts/AuthContext';
-import { UserRole } from '../../generated/com/yuelin/user/v1/user';
 
 interface AuthGuardProps {
   children: React.ReactNode;
-  requiredRoles?: UserRole[];
+  requiredRoles?: number[];
   fallbackPath?: string;
 }
 
@@ -21,13 +18,22 @@ export function AuthGuard({
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push(fallbackPath);
+      // If redirecting to login, include current path as returnTo
+      if (fallbackPath === '/auth/login') {
+        const currentPath = router.asPath;
+        router.push({
+          pathname: fallbackPath,
+          query: { returnTo: currentPath }
+        });
+      } else {
+        router.push(fallbackPath);
+      }
     }
   }, [isLoading, isAuthenticated, router, fallbackPath]);
 
   useEffect(() => {
     if (!isLoading && user && requiredRoles.length > 0) {
-      if (!requiredRoles.includes(user.role as UserRole)) {
+      if (!requiredRoles.includes(user.role)) {
         router.push('/');
       }
     }
@@ -45,7 +51,7 @@ export function AuthGuard({
     return null;
   }
 
-  if (requiredRoles.length > 0 && !requiredRoles.includes(user.role as UserRole)) {
+  if (requiredRoles.length > 0 && !requiredRoles.includes(user.role)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <h1 className="text-2xl font-bold text-gray-900">Access Denied</h1>

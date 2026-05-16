@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { AuthGuard } from '../../components/auth/AuthGuard';
 import { ArticleForm, ArticleFormData } from '../../components/editor/ArticleForm';
@@ -7,7 +5,6 @@ import { RevisionHistoryPanel } from '../../components/editor/RevisionHistoryPan
 import { useAutoSave } from '../../hooks/useAutoSave';
 import { useDirtyState } from '../../hooks/useDirtyState';
 import { articleService } from '../../services/article-service';
-import { UserRole } from '../../generated/com/yuelin/user/v1/user';
 
 export default function WritePage() {
   const [articleId, setArticleId] = useState<string | null>(null);
@@ -22,16 +19,8 @@ export default function WritePage() {
     if (!articleId) return;
     
     try {
-      await articleService.updateArticle({
-        id: articleId,
-        updateMask: ['content'],
-        title: '',
+      await articleService.updateArticle(articleId, {
         content: content,
-        columnId: '',
-        seriesId: '',
-        tagIds: [],
-        topicId: '',
-        state: 0,
       });
       markClean();
     } catch (error) {
@@ -67,22 +56,21 @@ export default function WritePage() {
     
     setIsSaving(true);
     try {
-      const response = await articleService.createArticle({
+      const article = await articleService.createArticle({
         title: data.title,
         content: data.content,
-        columnId: data.columnId || '',
-        seriesId: '',
+        columnId: data.columnId || undefined,
+        topicId: data.topicId || undefined,
         tagIds: data.tagIds,
-        topicId: data.topicId || '',
       });
-      if (response.article?.id) {
-        setArticleId(response.article.id);
+      if (article?.id) {
+        setArticleId(article.id);
         setCurrentContent(data.content);
       }
       alert('Article published successfully!');
     } catch (error) {
       console.error('Publish failed:', error);
-      alert('Failed to publish article');
+      alert('Failed to publish article: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsSaving(false);
     }
@@ -94,34 +82,28 @@ export default function WritePage() {
     setIsSaving(true);
     try {
       if (articleId) {
-        await articleService.updateArticle({
-          id: articleId,
-          updateMask: ['title', 'content'],
+        await articleService.updateArticle(articleId, {
           title: data.title,
           content: data.content,
-          columnId: data.columnId || '',
-          seriesId: '',
-          tagIds: data.tagIds,
-          topicId: data.topicId || '',
-          state: 1,
+          state: 'DRAFT',
         });
       } else {
-        const response = await articleService.createArticle({
+        const article = await articleService.createArticle({
           title: data.title,
           content: data.content,
-          columnId: data.columnId || '',
-          seriesId: '',
+          columnId: data.columnId || undefined,
+          topicId: data.topicId || undefined,
           tagIds: data.tagIds,
-          topicId: data.topicId || '',
         });
-        if (response.article?.id) {
-          setArticleId(response.article.id);
+        if (article?.id) {
+          setArticleId(article.id);
           setCurrentContent(data.content);
         }
       }
       markClean();
     } catch (error) {
       console.error('Save draft failed:', error);
+      alert('Failed to save draft: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsSaving(false);
     }
@@ -133,7 +115,7 @@ export default function WritePage() {
   };
 
   return (
-    <AuthGuard requiredRoles={[UserRole.USER_ROLE_ADMIN, UserRole.USER_ROLE_AUTHOR]} fallbackPath="/auth/login">
+    <AuthGuard requiredRoles={[1, 2]} fallbackPath="/auth/login">
       <main className="min-h-screen bg-gray-50">
         <header className="bg-white shadow-sm sticky top-0 z-10">
           <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">

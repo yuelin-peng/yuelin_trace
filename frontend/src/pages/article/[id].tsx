@@ -1,10 +1,7 @@
-'use client';
-
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { articleService } from '../../services/article-service';
+import { articleService, Article } from '../../services/article-service';
 import { commentService, CommentWithReplies } from '../../services/comment-service';
-import { Article } from '../../generated/com/yuelin/article/v1/article';
 import { renderMarkdown } from '../../lib/markdown-config';
 import { CommentList } from '../../components/comment/CommentList';
 import { CommentForm } from '../../components/comment/CommentForm';
@@ -13,21 +10,6 @@ import { Heading } from '@/components/ui/Typography';
 import { Card } from '@/components/ui/Card';
 import { MotionWrapper } from '@/components/motion/MotionWrapper';
 import { cn } from '@/lib/utils';
-
-const MOCK_ARTICLE: Article = {
-  id: 'mock-1',
-  title: 'Sample Article Title',
-  content: `# Welcome to this Article\n\nThis is a sample article with some **markdown** content.\n\n## Features\n\n- List item 1\n- List item 2\n- List item 3\n\n### Code Example\n\n\`\`\`javascript\nconst hello = 'world';\nconsole.log(hello);\n\`\`\`\n\n> This is a blockquote\n\nEnjoy reading!`,
-  authorId: 'author-1',
-  state: 2,
-  columnId: '',
-  seriesId: '',
-  tagIds: ['react', 'typescript'],
-  topicId: '',
-  createdAt: new Date('2024-01-15'),
-  updatedAt: new Date('2024-01-15'),
-  publishedAt: new Date('2024-01-15'),
-};
 
 const MOCK_COMMENTS: CommentWithReplies[] = [
   {
@@ -53,7 +35,7 @@ export default function ArticlePage() {
   const router = useRouter();
   const { id } = router.query;
   
-  const [article, setArticle] = useState<Article>(MOCK_ARTICLE);
+  const [article, setArticle] = useState<Article | null>(null);
   const [comments, setComments] = useState<CommentWithReplies[]>(MOCK_COMMENTS);
   const [isLoading, setIsLoading] = useState(true);
   const [isCommentLoading, setIsCommentLoading] = useState(false);
@@ -168,7 +150,7 @@ export default function ArticlePage() {
     }
   };
 
-  const formatDate = (date: Date | undefined) => {
+  const formatDate = (date: string | undefined) => {
     if (!date) return '';
     return new Intl.DateTimeFormat('en-US', {
       year: 'numeric',
@@ -179,7 +161,7 @@ export default function ArticlePage() {
     }).format(new Date(date));
   };
 
-  const readingTime = calculateReadingTime(article.content || '');
+  const readingTime = article ? calculateReadingTime(article.content || '') : 0;
 
   if (isLoading) {
     return (
@@ -206,20 +188,20 @@ export default function ArticlePage() {
           </a>
 
           <Heading level={1} className="mb-4">
-            {article.title || 'Untitled'}
+            {article?.title || 'Untitled'}
           </Heading>
 
           <div className="flex flex-wrap items-center gap-4 text-gray-500 text-sm">
-            <span>By {article.authorId || 'Anonymous'}</span>
+            <span>By {article?.authorId || 'Anonymous'}</span>
             <span>·</span>
-            <time dateTime={article.publishedAt?.toISOString()}>
-              {formatDate(article.publishedAt || article.createdAt)}
+            <time dateTime={article?.publishedAt}>
+              {formatDate(article?.publishedAt || article?.createdAt)}
             </time>
             <span>·</span>
             <span>{readingTime} min read</span>
           </div>
 
-          {article.tagIds?.length > 0 && (
+          {article?.tagIds && article.tagIds.length > 0 && (
             <div className="flex items-center gap-2 mt-4">
               {article.tagIds.map((tag) => (
                 <span
@@ -249,7 +231,7 @@ export default function ArticlePage() {
               'prose-li:text-gray-700',
               'prose-img:rounded-lg prose-img:shadow-md'
             )}
-            dangerouslySetInnerHTML={{ __html: renderMarkdown(article.content || '') }}
+            dangerouslySetInnerHTML={{ __html: renderMarkdown(article?.content || '') }}
           />
         </Card>
       </MotionWrapper>

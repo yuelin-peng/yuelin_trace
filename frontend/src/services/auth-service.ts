@@ -1,16 +1,3 @@
-import { grpcClient } from './grpc-client';
-import {
-  RegisterRequest,
-  RegisterResponse,
-  LoginRequest,
-  LoginResponse,
-  LogoutRequest,
-  RefreshTokenRequest,
-  RefreshTokenResponse,
-  GetCurrentUserRequest,
-  GetCurrentUserResponse,
-} from '../generated/com/yuelin/auth/v1/auth';
-import { User } from '../generated/com/yuelin/user/v1/user';
 import { tokenStorage } from '../lib/token-storage';
 
 export interface AuthUser {
@@ -27,38 +14,94 @@ export interface AuthResponse {
   expiresAt: Date;
 }
 
+interface ApiUser {
+  id: string;
+  email: string;
+  displayName: string;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ApiAuthResponse {
+  user: ApiUser;
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: string;
+}
+
+function mapRoleToNumber(role: string): number {
+  const roleMap: Record<string, number> = {
+    'ADMIN': 1,
+    'AUTHOR': 2,
+    'READER': 3,
+    'GUEST': 4,
+  };
+  return roleMap[role] ?? 0;
+}
+
+function mapApiUserToAuthUser(apiUser: ApiUser): AuthUser {
+  return {
+    id: apiUser.id,
+    email: apiUser.email,
+    displayName: apiUser.displayName,
+    role: mapRoleToNumber(apiUser.role),
+  };
+}
+
+function mapApiResponseToAuthResponse(apiResponse: ApiAuthResponse): AuthResponse {
+  return {
+    user: mapApiUserToAuthUser(apiResponse.user),
+    accessToken: apiResponse.accessToken,
+    refreshToken: apiResponse.refreshToken,
+    expiresAt: new Date(apiResponse.expiresAt),
+  };
+}
+
+async function apiCall<T>(endpoint: string, body?: Record<string, unknown>): Promise<T> {
+  const isGet = !body;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  // Forward auth token for GET /me
+  if (isGet && typeof window !== 'undefined') {
+    const token = tokenStorage.getAccessToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+
+  const response = await fetch(endpoint, {
+    method: isGet ? 'GET' : 'POST',
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorMessage = data?.error?.displayMessage || `HTTP ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  return data as T;
+}
+
 class AuthService {
   async register(email: string, password: string, displayName: string): Promise<AuthResponse> {
     try {
-      const request: RegisterRequest = {
+      const apiResponse = await apiCall<ApiAuthResponse>('/api/auth/register', {
         email,
         password,
         displayName,
-      };
+      });
 
-      const response = await grpcClient.call<RegisterResponse>(
-        'com.yuelin.auth.v1.AuthService',
-        'Register',
-        RegisterRequest.toJSON(request)
-      );
-
-      if (!response?.user || !response.accessToken) {
+      if (!apiResponse?.user || !apiResponse.accessToken) {
         throw new Error('Registration failed');
       }
 
-      const user = User.fromJSON(response.user);
-      const authResponse: AuthResponse = {
-        user: {
-          id: user.id,
-          email: user.email,
-          displayName: user.displayName,
-          role: user.role,
-        },
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        expiresAt: response.expiresAt ? new Date(response.expiresAt) : new Date(),
-      };
-
+      const authResponse = mapApiResponseToAuthResponse(apiResponse);
       tokenStorage.setTokens(authResponse.accessToken, authResponse.refreshToken, authResponse.expiresAt);
       return authResponse;
     } catch (error) {
@@ -69,31 +112,16 @@ class AuthService {
 
   async login(email: string, password: string): Promise<AuthResponse> {
     try {
-      const request: LoginRequest = { email, password };
+      const apiResponse = await apiCall<ApiAuthResponse>('/api/auth/login', {
+        email,
+        password,
+      });
 
-      const response = await grpcClient.call<LoginResponse>(
-        'com.yuelin.auth.v1.AuthService',
-        'Login',
-        LoginRequest.toJSON(request)
-      );
-
-      if (!response?.user || !response.accessToken) {
+      if (!apiResponse?.user || !apiResponse.accessToken) {
         throw new Error('Login failed');
       }
 
-      const user = User.fromJSON(response.user);
-      const authResponse: AuthResponse = {
-        user: {
-          id: user.id,
-          email: user.email,
-          displayName: user.displayName,
-          role: user.role,
-        },
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        expiresAt: response.expiresAt ? new Date(response.expiresAt) : new Date(),
-      };
-
+      const authResponse = mapApiResponseToAuthResponse(apiResponse);
       tokenStorage.setTokens(authResponse.accessToken, authResponse.refreshToken, authResponse.expiresAt);
       return authResponse;
     } catch (error) {
@@ -106,12 +134,7 @@ class AuthService {
     try {
       const refreshToken = tokenStorage.getRefreshToken();
       if (refreshToken) {
-        const request: LogoutRequest = { refreshToken };
-        await grpcClient.call(
-          'com.yuelin.auth.v1.AuthService',
-          'Logout',
-          LogoutRequest.toJSON(request)
-        );
+        await apiCall('/api/auth/logout', { refreshToken });
       }
     } catch (error) {
       console.error('Logout failed:', error);
@@ -127,23 +150,22 @@ class AuthService {
         return null;
       }
 
-      const request: RefreshTokenRequest = { refreshToken };
-      const response = await grpcClient.call<RefreshTokenResponse>(
-        'com.yuelin.auth.v1.AuthService',
-        'RefreshToken',
-        RefreshTokenRequest.toJSON(request)
-      );
+      const apiResponse = await apiCall<{
+        accessToken: string;
+        refreshToken: string;
+        expiresAt: string;
+      }>('/api/auth/refresh', { refreshToken });
 
-      if (!response?.accessToken) {
+      if (!apiResponse?.accessToken) {
         tokenStorage.clearTokens();
         return null;
       }
 
       const authResponse: AuthResponse = {
         user: null,
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        expiresAt: response.expiresAt ? new Date(response.expiresAt) : new Date(),
+        accessToken: apiResponse.accessToken,
+        refreshToken: apiResponse.refreshToken,
+        expiresAt: new Date(apiResponse.expiresAt),
       };
 
       tokenStorage.setTokens(authResponse.accessToken, authResponse.refreshToken, authResponse.expiresAt);
@@ -157,24 +179,13 @@ class AuthService {
 
   async getCurrentUser(): Promise<AuthUser | null> {
     try {
-      const request: GetCurrentUserRequest = {};
-      const response = await grpcClient.call<GetCurrentUserResponse>(
-        'com.yuelin.auth.v1.AuthService',
-        'GetCurrentUser',
-        GetCurrentUserRequest.toJSON(request)
-      );
+      const apiResponse = await apiCall<ApiUser>('/api/auth/me');
 
-      if (!response?.user) {
+      if (!apiResponse?.id) {
         return null;
       }
 
-      const user = User.fromJSON(response.user);
-      return {
-        id: user.id,
-        email: user.email,
-        displayName: user.displayName,
-        role: user.role,
-      };
+      return mapApiUserToAuthUser(apiResponse);
     } catch (error) {
       console.error('GetCurrentUser failed:', error);
       return null;

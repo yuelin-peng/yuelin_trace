@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useIsMobile } from '@/hooks/use-media-query';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/Button';
 
 export interface NavigationProps {
   className?: string;
@@ -13,6 +15,7 @@ export const Navigation: React.FC<NavigationProps> = ({ className }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const shouldReduceMotion = useReducedMotion();
   const isMobile = useIsMobile();
+  const { user, isAuthenticated, logout } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -28,6 +31,11 @@ export const Navigation: React.FC<NavigationProps> = ({ className }) => {
     { label: 'Topics', href: '/topics' },
     { label: 'About', href: '/about' },
   ];
+
+  const handleLogout = async () => {
+    await logout();
+    window.location.href = '/';
+  };
 
   return (
     <nav
@@ -59,9 +67,28 @@ export const Navigation: React.FC<NavigationProps> = ({ className }) => {
                 {link.label}
               </a>
             ))}
-            <Button variant="primary" size="sm">
-              Get Started
-            </Button>
+            
+            {isAuthenticated && user ? (
+              <div className="flex items-center space-x-4">
+                <span className="text-sm font-medium text-gray-700">
+                  {user.displayName}
+                </span>
+                <Button variant="ghost" size="sm" onClick={handleLogout}>
+                  Logout
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-3">
+                <a href="/auth/login" className="text-gray-700 hover:text-[#0284c7] transition-colors font-medium py-2 px-3">
+                  Sign In
+                </a>
+                <a href="/auth/register">
+                  <Button variant="primary" size="sm">
+                    Get Started
+                  </Button>
+                </a>
+              </div>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -117,6 +144,37 @@ export const Navigation: React.FC<NavigationProps> = ({ className }) => {
                   {link.label}
                 </a>
               ))}
+              
+              {isAuthenticated && user ? (
+                <>
+                  <div className="px-3 py-3 text-base font-medium text-gray-900 border-t border-gray-100 mt-2">
+                    {user.displayName}
+                  </div>
+                  <button
+                    onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}
+                    className="block w-full text-left px-3 py-3 rounded-md text-base font-medium text-red-600 hover:bg-red-50 min-h-[44px]"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <a
+                    href="/auth/login"
+                    className="block px-3 py-3 rounded-md text-base font-medium text-gray-700 hover:text-[#0284c7] hover:bg-gray-50 min-h-[44px] flex items-center border-t border-gray-100 mt-2"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Sign In
+                  </a>
+                  <a
+                    href="/auth/register"
+                    className="block px-3 py-3 rounded-md text-base font-medium text-[#0284c7] hover:bg-blue-50 min-h-[44px] flex items-center"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Get Started
+                  </a>
+                </>
+              )}
             </div>
           </motion.div>
         )}
@@ -124,8 +182,5 @@ export const Navigation: React.FC<NavigationProps> = ({ className }) => {
     </nav>
   );
 };
-
-// Import Button for the navigation
-import { Button } from '@/components/ui/Button';
 
 export default Navigation;

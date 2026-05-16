@@ -1,13 +1,15 @@
-import { grpcClient } from './grpc-client';
-import {
-  SearchArticlesRequest,
-  SearchArticlesResponse,
-  SearchResultItem,
-} from '../generated/com/yuelin/search/v1/search';
-import { Article } from '../generated/com/yuelin/article/v1/article';
-
 export interface SearchResult {
-  article: Article;
+  article: {
+    id: string;
+    title: string;
+    content: string;
+    authorId: string;
+    state: string;
+    topicId?: string;
+    tagIds: string[];
+    createdAt: string;
+    publishedAt?: string;
+  };
   relevanceScore: number;
   highlightedSnippet: string;
 }
@@ -31,42 +33,34 @@ class SearchService {
       sortOrder?: 'asc' | 'desc';
     }
   ): Promise<SearchResponse> {
-    try {
-      const request: SearchArticlesRequest = {
-        query,
-        pageRequest: {
-          pageSize: options?.pageSize || 20,
-          pageToken: options?.pageToken || '',
-        },
-        state: 0,
-        topicIds: options?.topicIds || [],
-        tagIds: options?.tagIds || [],
-        authorId: options?.authorId || '',
-        sortBy: options?.sortBy || '',
-        sortOrder: options?.sortOrder || '',
-      };
+    const queryParams = new URLSearchParams();
+    queryParams.append('query', query);
+    
+    if (options?.pageSize) queryParams.append('page_size', String(options.pageSize));
+    if (options?.pageToken) queryParams.append('page_token', options.pageToken);
+    if (options?.topicIds?.length) queryParams.append('topic_ids', options.topicIds.join(','));
+    if (options?.tagIds?.length) queryParams.append('tag_ids', options.tagIds.join(','));
+    if (options?.authorId) queryParams.append('author_id', options.authorId);
 
-      const response = await grpcClient.call<SearchArticlesResponse>(
-        'com.yuelin.search.v1.SearchService',
-        'SearchArticles',
-        SearchArticlesRequest.toJSON(request)
-      );
+    const response = await fetch(`/api/search?${queryParams.toString()}`);
+    const data = await response.json();
 
-      const results: SearchResult[] = (response?.results || []).map((item) => ({
-        article: item.article ? Article.fromJSON(item.article) : ({} as Article),
-        relevanceScore: item.relevanceScore || 0,
-        highlightedSnippet: item.highlightedSnippet || '',
-      }));
-
-      return {
-        results,
-        total: response?.totalMatches || 0,
-        hasMore: response?.pageResponse?.hasMore || false,
-      };
-    } catch (error) {
-      console.error('SearchArticles failed:', error);
-      throw error;
+    if (!response.ok) {
+      const errorMessage = data?.error?.displayMessage || `HTTP ${response.status}`;
+      throw new Error(errorMessage);
     }
+
+    const results: SearchResult[] = (data?.results || []).map((item: any) => ({
+      article: item.article || {},
+      relevanceScore: item.relevanceScore || 0,
+      highlightedSnippet: item.highlightedSnippet || '',
+    }));
+
+    return {
+      results,
+      total: data?.totalMatches || 0,
+      hasMore: data?.pageResponse?.hasMore || false,
+    };
   }
 }
 

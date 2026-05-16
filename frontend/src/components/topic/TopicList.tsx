@@ -1,6 +1,6 @@
 import React from 'react';
 import clsx from 'clsx';
-import { Topic } from '../../generated/com/yuelin/topic/v1/topic';
+import { Topic } from '../../services/topic-service';
 import TopicCard from './TopicCard';
 
 export interface TopicListProps {

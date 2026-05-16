@@ -39,8 +39,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ className }) => {
             A modern platform for sharing knowledge, connecting with experts, and building your digital presence.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg">Get Started</Button>
-            <Button variant="secondary" size="lg">Learn More</Button>
+            <a href="/articles">
+              <Button size="lg">Get Started</Button>
+            </a>
+            <a href="/about">
+              <Button variant="secondary" size="lg">Learn More</Button>
+            </a>
           </div>
         </motion.div>
       </div>
