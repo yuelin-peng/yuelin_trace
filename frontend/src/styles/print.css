@@ -1,0 +1,88 @@
+/* Print styles for content pages */
+@media print {
+  /* Hide navigation and interactive elements */
+  nav,
+  footer,
+  .reading-progress,
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Ensure content is visible */
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Typography adjustments for print */
+  body {
+    font-size: 12pt;
+    line-height: 1.5;
+    color: #000;
+    background: #fff;
+  }
+
+  /* Headings */
+  h1 {
+    font-size: 24pt;
+    margin-bottom: 12pt;
+  }
+
+  h2 {
+    font-size: 18pt;
+    margin-top: 18pt;
+    margin-bottom: 9pt;
+  }
+
+  h3 {
+    font-size: 14pt;
+    margin-top: 14pt;
+    margin-bottom: 7pt;
+  }
+
+  /* Links */
+  a {
+    color: #000;
+    text-decoration: underline;
+  }
+
+  a[href]::after {
+    content: ' (' attr(href) ')';
+    font-size: 10pt;
+    color: #666;
+  }
+
+  /* Images */
+  img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
+
+  /* Code blocks */
+  pre,
+  code {
+    background: #f5f5f5 !important;
+    border: 1px solid #ddd;
+    font-size: 10pt;
+  }
+
+  /* Page breaks */
+  h1,
+  h2,
+  h3 {
+    page-break-after: avoid;
+  }
+
+  p,
+  li {
+    page-break-inside: avoid;
+  }
+
+  /* Cards and containers */
+  .card,
+  article {
+    box-shadow: none !important;
+    border: 1px solid #ddd;
+  }
+}

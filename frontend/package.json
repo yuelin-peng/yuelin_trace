@@ -15,9 +15,13 @@
     "generate:grpc": "grpc_tools_node_protoc --js_out=import_style=commonjs,binary:./src/generated --grpc-web_out=import_style=typescript,mode=grpcwebtext:./src/generated -I ../trace_rpc_interfaces/src/main/proto ../trace_rpc_interfaces/src/main/proto/*.proto ../trace_rpc_interfaces/src/main/proto/**/*.proto"
   },
   "dependencies": {
+    "@axe-core/react": "^4.11.3",
     "@grpc/grpc-js": "^1.10.0",
     "@grpc/proto-loader": "^0.7.0",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.0",
+    "eslint-config-prettier": "^10.1.8",
+    "framer-motion": "^12.38.0",
     "grpc-web": "^1.5.0",
     "markdown-it": "^14.1.0",
     "markdown-it-anchor": "^9.0.0",
@@ -25,10 +29,12 @@
     "markdown-it-mark": "^3.0.0",
     "markdown-it-task-lists": "^2.1.0",
     "next": "13.5.9",
+    "prettier": "^3.8.3",
     "protobufjs": "^7.2.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "swr": "^2.2.0",
+    "tailwind-merge": "^3.6.0",
     "testcontainers": "^10.28.0"
   },
   "devDependencies": {

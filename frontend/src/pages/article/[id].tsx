@@ -1,40 +1,23 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { articleService } from '../../services/article-service';
 import { commentService, CommentWithReplies } from '../../services/comment-service';
 import { Article } from '../../generated/com/yuelin/article/v1/article';
 import { renderMarkdown } from '../../lib/markdown-config';
 import { CommentList } from '../../components/comment/CommentList';
 import { CommentForm } from '../../components/comment/CommentForm';
-
-interface ArticlePageProps {
-  params: Promise<{ id: string }>;
-}
+import { ContentPage } from '@/components/layout/ContentPage';
+import { Heading } from '@/components/ui/Typography';
+import { Card } from '@/components/ui/Card';
+import { MotionWrapper } from '@/components/motion/MotionWrapper';
+import { cn } from '@/lib/utils';
 
 const MOCK_ARTICLE: Article = {
   id: 'mock-1',
   title: 'Sample Article Title',
-  content: `# Welcome to this Article
-
-This is a sample article with some **markdown** content.
-
-## Features
-
-- List item 1
-- List item 2
-- List item 3
-
-### Code Example
-
-\`\`\`javascript
-const hello = 'world';
-console.log(hello);
-\`\`\`
-
-> This is a blockquote
-
-Enjoy reading!`,
+  content: `# Welcome to this Article\n\nThis is a sample article with some **markdown** content.\n\n## Features\n\n- List item 1\n- List item 2\n- List item 3\n\n### Code Example\n\n\`\`\`javascript\nconst hello = 'world';\nconsole.log(hello);\n\`\`\`\n\n> This is a blockquote\n\nEnjoy reading!`,
   authorId: 'author-1',
   state: 2,
   columnId: '',
@@ -48,40 +31,39 @@ Enjoy reading!`,
 
 const MOCK_COMMENTS: CommentWithReplies[] = [
   {
-    id: 'c1',
-    articleId: 'mock-1',
-    authorId: 'User1',
-    parentId: '',
+    id: 'comment-1',
     content: 'Great article! Very helpful.',
+    authorId: 'user-1',
+    articleId: 'mock-1',
+    parentId: '',
     createdAt: new Date('2024-01-16'),
     updatedAt: new Date('2024-01-16'),
     replies: [],
     depth: 0,
   },
-  {
-    id: 'c2',
-    articleId: 'mock-1',
-    authorId: 'User2',
-    parentId: '',
-    content: 'Thanks for sharing this!',
-    createdAt: new Date('2024-01-17'),
-    updatedAt: new Date('2024-01-17'),
-    replies: [],
-    depth: 0,
-  },
 ];
 
-export default function ArticlePage({ params }: ArticlePageProps) {
-  const resolvedParams = use(params);
+function calculateReadingTime(content: string): number {
+  const wordsPerMinute = 200;
+  const wordCount = content.trim().split(/\s+/).length;
+  return Math.ceil(wordCount / wordsPerMinute);
+}
+
+export default function ArticlePage() {
+  const router = useRouter();
+  const { id } = router.query;
+  
   const [article, setArticle] = useState<Article>(MOCK_ARTICLE);
   const [comments, setComments] = useState<CommentWithReplies[]>(MOCK_COMMENTS);
   const [isLoading, setIsLoading] = useState(true);
   const [isCommentLoading, setIsCommentLoading] = useState(false);
 
   useEffect(() => {
+    if (!id || typeof id !== 'string') return;
+    
     const fetchArticle = async () => {
       try {
-        const result = await articleService.getArticle(resolvedParams.id);
+        const result = await articleService.getArticle(id);
         if (result) {
           setArticle(result);
         }
@@ -92,13 +74,15 @@ export default function ArticlePage({ params }: ArticlePageProps) {
       }
     };
     fetchArticle();
-  }, [resolvedParams.id]);
+  }, [id]);
 
   useEffect(() => {
+    if (!id || typeof id !== 'string') return;
+    
     const fetchComments = async () => {
       setIsCommentLoading(true);
       try {
-        const result = await commentService.listComments(resolvedParams.id);
+        const result = await commentService.listComments(id);
         if (result.comments.length > 0) {
           const tree = commentService.buildCommentTree(result.comments, 5);
           setComments(tree);
@@ -110,11 +94,12 @@ export default function ArticlePage({ params }: ArticlePageProps) {
       }
     };
     fetchComments();
-  }, [resolvedParams.id]);
+  }, [id]);
 
   const handleCreateComment = async (content: string) => {
+    if (!id || typeof id !== 'string') return;
     try {
-      const newComment = await commentService.createComment(resolvedParams.id, content);
+      const newComment = await commentService.createComment(id, content);
       setComments((prev) => [
         ...prev,
         { ...newComment, replies: [], depth: 0 },
@@ -125,8 +110,9 @@ export default function ArticlePage({ params }: ArticlePageProps) {
   };
 
   const handleReply = async (parentId: string, content: string) => {
+    if (!id || typeof id !== 'string') return;
     try {
-      const newComment = await commentService.createComment(resolvedParams.id, content, parentId);
+      const newComment = await commentService.createComment(id, content, parentId);
       setComments((prev) => {
         const addReply = (comments: CommentWithReplies[]): CommentWithReplies[] => {
           return comments.map((c) => {
@@ -193,74 +179,100 @@ export default function ArticlePage({ params }: ArticlePageProps) {
     }).format(new Date(date));
   };
 
+  const readingTime = calculateReadingTime(article.content || '');
+
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="inline-block w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-      </main>
+      <ContentPage showReadingProgress={false}>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="inline-block w-10 h-10 border-4 border-[#0284c7] border-t-transparent rounded-full animate-spin" />
+        </div>
+      </ContentPage>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <ContentPage maxWidth="narrow">
+      <MotionWrapper>
+        <header className="mb-8 pb-8 border-b border-gray-200">
+          <a
+            href="/"
+            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 text-sm font-medium"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            <span>Back</span>
+            Back to Articles
           </a>
-          <span className="text-sm text-gray-500">
-            {article.authorId || 'Anonymous'}
-          </span>
-        </div>
-      </header>
 
-      <article className="max-w-4xl mx-auto px-4 py-8">
-        <header className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">{article.title || 'Untitled'}</h1>
-          <div className="flex items-center gap-4 text-gray-500 text-sm">
+          <Heading level={1} className="mb-4">
+            {article.title || 'Untitled'}
+          </Heading>
+
+          <div className="flex flex-wrap items-center gap-4 text-gray-500 text-sm">
             <span>By {article.authorId || 'Anonymous'}</span>
             <span>·</span>
             <time dateTime={article.publishedAt?.toISOString()}>
               {formatDate(article.publishedAt || article.createdAt)}
             </time>
+            <span>·</span>
+            <span>{readingTime} min read</span>
           </div>
+
           {article.tagIds?.length > 0 && (
             <div className="flex items-center gap-2 mt-4">
               {article.tagIds.map((tag) => (
-                <span key={tag} className="px-2 py-1 bg-primary-100 text-primary-700 text-xs rounded-md">
+                <span
+                  key={tag}
+                  className="px-3 py-1 bg-[#f0f9ff] text-[#0284c7] text-sm rounded-full font-medium"
+                >
                   {tag}
                 </span>
               ))}
             </div>
           )}
         </header>
+      </MotionWrapper>
 
-        <div
-          className="prose prose-lg prose-slate max-w-none bg-white rounded-xl shadow-sm border border-gray-200 p-8"
-          dangerouslySetInnerHTML={{ __html: renderMarkdown(article.content || '') }}
-        />
-      </article>
+      <MotionWrapper delay={0.1}>
+        <Card className="mb-12">
+          <div
+            className={cn(
+              'prose prose-lg prose-slate max-w-none',
+              'prose-headings:text-gray-900 prose-headings:font-bold',
+              'prose-p:text-gray-700 prose-p:leading-relaxed',
+              'prose-a:text-[#0284c7] prose-a:no-underline hover:prose-a:underline',
+              'prose-strong:text-gray-900',
+              'prose-code:bg-gray-100 prose-code:text-gray-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm',
+              'prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:p-4 prose-pre:rounded-lg',
+              'prose-blockquote:border-l-4 prose-blockquote:border-[#0284c7] prose-blockquote:pl-4 prose-blockquote:italic',
+              'prose-li:text-gray-700',
+              'prose-img:rounded-lg prose-img:shadow-md'
+            )}
+            dangerouslySetInnerHTML={{ __html: renderMarkdown(article.content || '') }}
+          />
+        </Card>
+      </MotionWrapper>
 
-      <section className="max-w-4xl mx-auto px-4 py-8 border-t border-gray-200">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">
-          Comments ({comments.length})
-        </h2>
+      <MotionWrapper delay={0.2}>
+        <section className="mt-12 pt-8 border-t border-gray-200">
+          <Heading level={2} className="mb-6">
+            Comments ({comments.length})
+          </Heading>
 
-        <div className="mb-8">
-          <CommentForm onSubmit={handleCreateComment} />
-        </div>
+          <Card className="mb-8">
+            <CommentForm onSubmit={handleCreateComment} />
+          </Card>
 
-        <CommentList
-          comments={comments}
-          onReply={handleReply}
-          onEdit={handleEditComment}
-          onDelete={handleDeleteComment}
-          isLoading={isCommentLoading}
-        />
-      </section>
-    </main>
+          <CommentList
+            comments={comments}
+            onReply={handleReply}
+            onEdit={handleEditComment}
+            onDelete={handleDeleteComment}
+            isLoading={isCommentLoading}
+          />
+        </section>
+      </MotionWrapper>
+    </ContentPage>
   );
 }
